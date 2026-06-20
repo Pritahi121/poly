@@ -3,7 +3,8 @@ import { db } from "@/lib/db";
 import { filterPatchesWithRules } from "@/lib/rules";
 import { CONFIDENCE_THRESHOLD } from "@/lib/types";
 import { generateCacheKey, getCachedPatch, setCachedPatch, invalidateCache } from "@/lib/cache";
-import { applyPatches, validatePatch } from "@/lib/patches";
+import { validatePatch } from "@/lib/patches";
+import { ruleBasedMapping, aiMapping } from "@/lib/ai-engine";
 
 export async function POST(req: NextRequest) {
   try {
@@ -28,28 +29,36 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Call AI engine service
-    let analysisResult;
-    try {
-      const aiRes = await fetch(`http://localhost:3030/analyze-drift?XTransformPort=3030`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tenantId, endpoint, method, expectedSchema, actualSchema, rules }),
-      });
-      analysisResult = await aiRes.json();
-    } catch {
-      // Fallback: return empty result if AI engine is down
-      analysisResult = { mapping: [], confidence: 0, reason: "AI engine unavailable" };
-    }
+    // Step 1: Rule-based mapping (runs BEFORE AI)
+    const { patches: rulePatches, driftEvents } = ruleBasedMapping(
+      expectedSchema || {},
+      actualSchema || {},
+      rules || []
+    );
 
-    // Apply rules
-    const { allowed, blocked } = filterPatchesWithRules(analysisResult.mapping || [], rules || []);
+    // Step 2: AI mapping (enhances rule-based results)
+    const aiPatches = await aiMapping(
+      expectedSchema || {},
+      actualSchema || {},
+      driftEvents,
+      rules || []
+    );
+
+    const allPatches = [...rulePatches, ...aiPatches];
+
+    // Calculate overall confidence
+    const analysisConfidence =
+      allPatches.length > 0
+        ? allPatches.reduce((sum, p) => sum + p.confidence, 0) / allPatches.length
+        : 0;
+
+    // Apply rules filter
+    const { allowed, blocked } = filterPatchesWithRules(allPatches, rules || []);
 
     // Determine auto-patch vs alert
-    const shouldAutoPatch = analysisResult.confidence >= CONFIDENCE_THRESHOLD && allowed.length > 0;
+    const shouldAutoPatch = analysisConfidence >= CONFIDENCE_THRESHOLD && allowed.length > 0;
 
     if (shouldAutoPatch) {
-      // Validate the patch
       const isValid = validatePatch(actualSchema, allowed, Object.keys(expectedSchema || {}));
       if (!isValid) {
         invalidateCache(cacheKey);
@@ -64,85 +73,80 @@ export async function POST(req: NextRequest) {
 
     // Cache the patches
     if (allowed.length > 0) {
-      setCachedPatch(
-        cacheKey,
-        tenantId,
-        endpoint,
-        method || "GET",
-        "api",
-        responseSignature,
-        allowed,
-        analysisResult.confidence || 0
-      );
+      setCachedPatch(cacheKey, tenantId, endpoint, method || "GET", "api", responseSignature, allowed, analysisConfidence);
     }
 
     // Create incident record
-    const project = await db.project.findFirst({ where: { id: tenantId } });
-    if (project && (analysisResult.driftEvents?.length > 0 || allowed.length > 0 || blocked.length > 0)) {
-      await db.incident.create({
-        data: {
-          projectId: tenantId,
-          endpoint,
-          method: method || "GET",
-          severity: allowed.length > 0 ? "medium" : "high",
-          driftType: analysisResult.driftEvents?.[0]?.type || "type_change",
-          expectedSchema: JSON.stringify(expectedSchema),
-          actualSchema: JSON.stringify(actualSchema),
-          confidence: analysisResult.confidence || 0,
-          status: shouldAutoPatch ? "resolved" : "open",
-          autoFixed: shouldAutoPatch,
-        },
-      });
-
-      // Create patch history records
-      for (const patch of allowed) {
-        await db.patchHistory.create({
+    try {
+      const project = await db.project.findFirst({ where: { id: tenantId } });
+      if (project && (driftEvents.length > 0 || allowed.length > 0 || blocked.length > 0)) {
+        await db.incident.create({
           data: {
             projectId: tenantId,
             endpoint,
-            patchType: patch.type,
-            fromPath: patch.from,
-            toPath: patch.to,
-            confidence: patch.confidence,
-            success: true,
+            method: method || "GET",
+            severity: allowed.length > 0 ? "medium" : "high",
+            driftType: driftEvents[0]?.type || "type_change",
+            expectedSchema: JSON.stringify(expectedSchema),
+            actualSchema: JSON.stringify(actualSchema),
+            confidence: analysisConfidence,
+            status: shouldAutoPatch ? "resolved" : "open",
+            autoFixed: shouldAutoPatch,
+          },
+        });
+
+        for (const patch of allowed) {
+          await db.patchHistory.create({
+            data: {
+              projectId: tenantId,
+              endpoint,
+              patchType: patch.type,
+              fromPath: patch.from,
+              toPath: patch.to,
+              confidence: patch.confidence,
+              success: true,
+            },
+          });
+        }
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        await db.usageMetric.upsert({
+          where: { projectId_date: { projectId: tenantId, date: today } },
+          create: {
+            projectId: tenantId,
+            date: today,
+            requestsMonitored: 1,
+            driftsDetected: driftEvents.length,
+            autoFixed: shouldAutoPatch ? 1 : 0,
+            aiCalls: 1,
+            cacheHits: cachedPatches ? 1 : 0,
+            cacheMisses: cachedPatches ? 0 : 1,
+          },
+          update: {
+            requestsMonitored: { increment: 1 },
+            driftsDetected: { increment: driftEvents.length },
+            autoFixed: { increment: shouldAutoPatch ? 1 : 0 },
+            aiCalls: { increment: 1 },
+            cacheHits: { increment: cachedPatches ? 1 : 0 },
+            cacheMisses: { increment: cachedPatches ? 0 : 1 },
           },
         });
       }
-
-      // Update usage metrics
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      await db.usageMetric.upsert({
-        where: { projectId_date: { projectId: tenantId, date: today } },
-        create: {
-          projectId: tenantId,
-          date: today,
-          requestsMonitored: 1,
-          driftsDetected: (analysisResult.driftEvents?.length) || 0,
-          autoFixed: shouldAutoPatch ? 1 : 0,
-          aiCalls: 1,
-          cacheHits: cachedPatches ? 1 : 0,
-          cacheMisses: cachedPatches ? 0 : 1,
-        },
-        update: {
-          requestsMonitored: { increment: 1 },
-          driftsDetected: { increment: (analysisResult.driftEvents?.length) || 0 },
-          autoFixed: { increment: shouldAutoPatch ? 1 : 0 },
-          aiCalls: { increment: 1 },
-          cacheHits: { increment: cachedPatches ? 1 : 0 },
-          cacheMisses: { increment: cachedPatches ? 0 : 1 },
-        },
-      });
+    } catch (dbError) {
+      console.error("DB write error (non-fatal):", dbError);
     }
 
     return NextResponse.json({
       mapping: allowed,
       blocked,
-      confidence: analysisResult.confidence || 0,
-      reason: analysisResult.reason || "Analysis complete",
+      confidence: Math.round(analysisConfidence * 100) / 100,
+      reason: allPatches.length > 0
+        ? `Generated ${allPatches.length} mapping operations (${rulePatches.length} rule-based, ${aiPatches.length} AI-enhanced)`
+        : "No safe mappings could be generated",
       autoPatch: shouldAutoPatch,
       cached: false,
-      driftEvents: analysisResult.driftEvents || [],
+      driftEvents,
     });
   } catch (error) {
     console.error("Analyze drift error:", error);
