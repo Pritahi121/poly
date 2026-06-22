@@ -12,6 +12,10 @@ FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+
+# Switch to PostgreSQL schema for production (Railway/Supabase/Neon)
+RUN cp prisma/schema.postgresql.prisma prisma/schema.prisma
+
 RUN npx prisma generate
 RUN npm run build
 
