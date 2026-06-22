@@ -13,10 +13,11 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Switch to PostgreSQL schema for production (Railway/Supabase/Neon)
+# Switch to PostgreSQL schema for production
 RUN cp prisma/schema.postgresql.prisma prisma/schema.prisma
 
-RUN npx prisma generate
+# Use project's own Prisma (v6), NOT npx which pulls latest v7
+RUN ./node_modules/.bin/prisma generate
 RUN npm run build
 
 # Production image
@@ -33,6 +34,7 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
 USER nextjs
 
