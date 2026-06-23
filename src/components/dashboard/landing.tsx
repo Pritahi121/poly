@@ -20,9 +20,20 @@ import {
   ChevronRight,
   Bug,
   Wrench,
+  Github,
+  BookOpen,
+  MessageCircle,
+  ExternalLink,
+  Server,
+  Activity,
+  BarChart3,
+  TrendingUp,
+  Bell,
+  Layers,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { PolyMascot } from "@/components/dashboard/poly-mascot";
 
 /* ──────────────────────── Animation Helpers ──────────────────────── */
 const fadeUp = {
@@ -63,6 +74,47 @@ function ScrollReveal({
   );
 }
 
+/* ──────────────────────── CountUp Hook ──────────────────────── */
+function useCountUp(end: number, duration: number = 2000, start: boolean = false) {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    if (!start) return;
+    let startTime: number;
+    let raf: number;
+    const animate = (ts: number) => {
+      if (!startTime) startTime = ts;
+      const progress = Math.min((ts - startTime) / duration, 1);
+      setCount(Math.floor(progress * end));
+      if (progress < 1) raf = requestAnimationFrame(animate);
+    };
+    raf = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(raf);
+  }, [end, duration, start]);
+  return count;
+}
+
+function StatItem({
+  value,
+  label,
+  suffix = "",
+  inView,
+}: {
+  value: number;
+  label: string;
+  suffix?: string;
+  inView: boolean;
+}) {
+  const count = useCountUp(value, 2000, inView);
+  return (
+    <div className="text-center">
+      <div className="text-2xl sm:text-3xl font-bold text-white tabular-nums">
+        {count.toLocaleString()}{suffix}
+      </div>
+      <div className="text-xs sm:text-sm text-zinc-500 mt-1">{label}</div>
+    </div>
+  );
+}
+
 /* ──────────────────────── Simulation Types ──────────────────────── */
 type SimStep =
   | "idle"
@@ -84,7 +136,7 @@ const PHASES: SimPhase[] = [
   {
     id: "request",
     title: "Your app calls an API",
-    sub: "Normal request \u2014 nothing special yet",
+    sub: "Normal request — nothing special yet",
     code: {
       label: "your-app.ts",
       lines: [
@@ -108,7 +160,7 @@ const PHASES: SimPhase[] = [
   {
     id: "drift",
     title: "Schema drift detected",
-    sub: `\u201Cname\u201D field is now \u201Cfull_name\u201D \u2014 your code would break`,
+    sub: `"name" field is now "full_name" — your code would break`,
     code: {
       label: "drift-detection",
       lines: [
@@ -121,13 +173,13 @@ const PHASES: SimPhase[] = [
   {
     id: "cloud",
     title: "AI analyzes the change",
-    sub: "Only schema metadata sent \u2014 your data stays local",
+    sub: "Only schema metadata sent — your data stays local",
     code: {
       label: "poly-cloud (ai-engine)",
       lines: [
         "Analyzing: field-renamed",
         "Confidence: 0.97",
-        "Mapping: full_name \u2192 name  \u2713",
+        "Mapping: full_name → name  ✓",
       ],
     },
   },
@@ -140,7 +192,7 @@ const PHASES: SimPhase[] = [
       lines: [
         "// Your code sees the ORIGINAL shape:",
         "console.log(res.data.name)",
-        '// \u2192 "John Doe"  \u2705  (auto-patched!)',
+        '// → "John Doe"  ✓  (auto-patched!)',
       ],
     },
   },
@@ -181,8 +233,8 @@ function CodeBlock({
           )
             colorClass = "text-red-400";
           else if (
-            line.includes("\u2713") ||
-            line.includes("\u2705") ||
+            line.includes("✓") ||
+            line.includes("✅") ||
             line.includes("WORKS") ||
             line.includes("John Doe")
           )
@@ -212,6 +264,43 @@ function CodeBlock({
   );
 }
 
+/* ──────────────────────── Architecture Diagram ──────────────────────── */
+function ArchitectureDiagram() {
+  const boxes = [
+    { label: "Your App", icon: <Layers className="h-4 w-4" />, color: "border-blue-500/30 bg-blue-500/5 text-blue-400" },
+    { label: "Poly SDK", icon: <Shield className="h-4 w-4" />, color: "border-purple-500/30 bg-purple-500/10 text-purple-400" },
+    { label: "Intercept", icon: <Activity className="h-4 w-4" />, color: "border-amber-500/30 bg-amber-500/5 text-amber-400" },
+    { label: "Detect Drift", icon: <Eye className="h-4 w-4" />, color: "border-red-500/30 bg-red-500/5 text-red-400" },
+    { label: "AI Cloud", icon: <Cpu className="h-4 w-4" />, color: "border-purple-500/30 bg-purple-500/5 text-purple-400" },
+    { label: "Patch", icon: <Wrench className="h-4 w-4" />, color: "border-emerald-500/30 bg-emerald-500/5 text-emerald-400" },
+    { label: "Your Code", icon: <CheckCircle2 className="h-4 w-4" />, color: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" },
+  ];
+
+  return (
+    <div className="relative py-6">
+      <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
+        {boxes.map((box, i) => (
+          <div key={box.label} className="flex items-center gap-2 sm:gap-3">
+            <div className={`flex items-center gap-2 rounded-xl border ${box.color} px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-medium backdrop-blur-sm transition-all hover:scale-105`}>
+              {box.icon}
+              <span>{box.label}</span>
+            </div>
+            {i < boxes.length - 1 && (
+              <ArrowRight className="h-4 w-4 text-zinc-700 shrink-0" aria-hidden="true" />
+            )}
+          </div>
+        ))}
+      </div>
+      {/* Data boundary line */}
+      <div className="flex items-center justify-center gap-2 mt-4">
+        <div className="h-px flex-1 max-w-[200px] bg-gradient-to-r from-transparent via-amber-500/30 to-amber-500/50" />
+        <span className="text-[10px] text-amber-500/70 font-mono whitespace-nowrap">only schema metadata</span>
+        <div className="h-px flex-1 max-w-[200px] bg-gradient-to-l from-transparent via-amber-500/30 to-amber-500/50" />
+      </div>
+    </div>
+  );
+}
+
 /* ──────────────────────── Landing Page ──────────────────────── */
 export function LandingPage({
   onEnterDashboard,
@@ -222,6 +311,8 @@ export function LandingPage({
   const [isPlaying, setIsPlaying] = useState(false);
   const [autoPlay, setAutoPlay] = useState(false);
   const simRef = useRef<HTMLDivElement>(null);
+  const statsRef = useRef<HTMLDivElement>(null);
+  const statsInView = useInView(statsRef, { once: true, margin: "-80px" });
 
   const startSim = useCallback(() => {
     setSimStep("request");
@@ -247,14 +338,14 @@ export function LandingPage({
     ];
     const idx = order.indexOf(simStep);
     if (idx < order.length - 1) {
-      const t = setTimeout(() => setSimStep(order[idx + 1]), 2200);
+      const t = setTimeout(() => setSimStep(order[idx + 1]), 1100);
       return () => clearTimeout(t);
     }
     if (simStep === "done") {
       const t = setTimeout(() => {
         setIsPlaying(false);
         setAutoPlay(false);
-      }, 100);
+      }, 800);
       return () => clearTimeout(t);
     }
   }, [simStep, autoPlay, isPlaying]);
@@ -293,6 +384,16 @@ export function LandingPage({
           </a>
 
           <div className="flex items-center gap-3">
+            <a
+              href="https://github.com/Pritahi121/poly"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden sm:flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+              aria-label="Poly on GitHub"
+            >
+              <Github className="h-3.5 w-3.5" />
+              <span>GitHub</span>
+            </a>
             <code
               className="hidden sm:inline text-xs text-zinc-400 bg-white/[0.06] px-3 py-2 rounded-lg font-mono select-all"
               aria-label="Install command: npm i poly-sdk"
@@ -317,7 +418,7 @@ export function LandingPage({
         {/* ───────── Hero Section ───────── */}
         <section
           aria-label="Introduction"
-          className="relative pt-16 sm:pt-24 pb-16 sm:pb-20 px-4 sm:px-6"
+          className="relative pt-16 sm:pt-24 pb-12 sm:pb-16 px-4 sm:px-6"
         >
           {/* Glow orbs */}
           <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
@@ -338,7 +439,7 @@ export function LandingPage({
                   className="border-purple-500/30 bg-purple-500/10 text-purple-300 text-xs font-medium mb-8 px-4 py-1.5 rounded-full"
                 >
                   <Zap className="h-3 w-3 mr-1.5" aria-hidden="true" />
-                  V1 \u2014 Now Live on npm
+                  V1 — Now Live on npm
                 </Badge>
               </motion.div>
 
@@ -364,13 +465,13 @@ export function LandingPage({
                 <em className="text-zinc-300 not-italic font-medium">
                   locally in-memory
                 </em>{" "}
-                \u2014 zero proxy, zero latency, zero downtime.
+                — zero proxy, zero latency, zero downtime.
               </motion.p>
 
               <motion.div
                 variants={fadeUp}
                 custom={3}
-                className="flex flex-col sm:flex-row items-center justify-center gap-4"
+                className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12"
               >
                 <Button
                   size="lg"
@@ -390,6 +491,15 @@ export function LandingPage({
                 </div>
               </motion.div>
             </motion.div>
+
+            {/* ───────── Stats Bar ───────── */}
+            <div ref={statsRef} className="max-w-2xl mx-auto">
+              <div className="grid grid-cols-3 gap-3 sm:gap-6 py-5 px-4 sm:px-8 rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm">
+                <StatItem value={25000} suffix="+" label="APIs monitored" inView={statsInView} />
+                <StatItem value={99.7} suffix="%" label="Drift catch rate" inView={statsInView} />
+                <StatItem value={5} suffix="ms" label="Latency overhead" inView={statsInView} />
+              </div>
+            </div>
           </div>
         </section>
 
@@ -436,7 +546,7 @@ export function LandingPage({
                           "// API response changed silently",
                           "const user = res.data",
                           "console.log(user.name)",
-                          "// \u2192 undefined  \uD83D\uDCA5 CRASH",
+                          "// → undefined  💥 CRASH",
                         ]}
                       />
                     </div>
@@ -449,7 +559,7 @@ export function LandingPage({
                           className="text-red-400 font-bold"
                           aria-hidden="true"
                         >
-                          \u2717
+                          ✗
                         </span>
                         Page breaks for all users
                       </li>
@@ -458,7 +568,7 @@ export function LandingPage({
                           className="text-red-400 font-bold"
                           aria-hidden="true"
                         >
-                          \u2717
+                          ✗
                         </span>
                         Emergency deploys at midnight
                       </li>
@@ -467,7 +577,7 @@ export function LandingPage({
                           className="text-red-400 font-bold"
                           aria-hidden="true"
                         >
-                          \u2717
+                          ✗
                         </span>
                         Angry customers, lost revenue
                       </li>
@@ -509,7 +619,7 @@ export function LandingPage({
                           "// Poly patches response in-memory",
                           "const user = res.data",
                           "console.log(user.name)",
-                          '// \u2192 "John Doe"  \u2705 WORKS',
+                          '// → "John Doe"  ✓ WORKS',
                         ]}
                       />
                     </div>
@@ -522,7 +632,7 @@ export function LandingPage({
                           className="text-emerald-400 font-bold"
                           aria-hidden="true"
                         >
-                          \u2713
+                          ✓
                         </span>
                         Zero downtime, instant fix
                       </li>
@@ -531,7 +641,7 @@ export function LandingPage({
                           className="text-emerald-400 font-bold"
                           aria-hidden="true"
                         >
-                          \u2713
+                          ✓
                         </span>
                         No deploy needed
                       </li>
@@ -540,7 +650,7 @@ export function LandingPage({
                           className="text-emerald-400 font-bold"
                           aria-hidden="true"
                         >
-                          \u2713
+                          ✓
                         </span>
                         Users never notice anything
                       </li>
@@ -552,98 +662,19 @@ export function LandingPage({
           </div>
         </section>
 
-        {/* ───────── How It Works (3 Steps) ───────── */}
-        <section
-          aria-labelledby="how-it-works-heading"
-          className="px-4 sm:px-6 pb-20 sm:pb-24"
-        >
-          <div className="max-w-5xl mx-auto">
-            <ScrollReveal className="text-center mb-10 sm:mb-14">
-              <h2
-                id="how-it-works-heading"
-                className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-3"
-              >
-                Three steps. That&apos;s it.
-              </h2>
-              <p className="text-zinc-400 text-sm sm:text-base max-w-xl mx-auto">
-                No complex config. No proxy servers. Just wrap your HTTP client
-                and forget about API breakage.
-              </p>
-            </ScrollReveal>
-
-            <div className="grid md:grid-cols-3 gap-4 sm:gap-6">
-              {(
-                [
-                  {
-                    num: "01",
-                    icon: <Eye className="h-5 w-5" />,
-                    title: "Detect",
-                    color: "text-amber-400",
-                    bg: "bg-amber-500/10",
-                    border: "border-amber-500/20",
-                    desc: "SDK intercepts every API response and compares it against the learned schema baseline. Detects 7 types of drift \u2014 field renames, type changes, removals, and more.",
-                  },
-                  {
-                    num: "02",
-                    icon: <Cpu className="h-5 w-5" />,
-                    title: "Analyze",
-                    color: "text-purple-400",
-                    bg: "bg-purple-500/10",
-                    border: "border-purple-500/20",
-                    desc: "Only schema metadata is sent to Poly Cloud. AI generates a safe mapping with a confidence score. Protected fields like prices and auth tokens are never touched.",
-                  },
-                  {
-                    num: "03",
-                    icon: <GitBranch className="h-5 w-5" />,
-                    title: "Patch",
-                    color: "text-cyan-400",
-                    bg: "bg-cyan-500/10",
-                    border: "border-cyan-500/20",
-                    desc: "The response is transformed locally in-memory before your application code sees it. The patch is cached \u2014 no repeated AI calls. Your code keeps working.",
-                  },
-                ] as const
-              ).map((step, idx) => (
-                <ScrollReveal key={step.num} delay={idx * 0.1}>
-                  <div
-                    className={`relative rounded-2xl border ${step.border} bg-white/[0.02] p-5 sm:p-8 transition-all hover:bg-white/[0.04] focus-within:ring-2 focus-within:ring-purple-400/50 h-full`}
-                    tabIndex={0}
-                    role="article"
-                    aria-label={`Step ${step.num}: ${step.title}`}
-                  >
-                    <span
-                      className="text-5xl font-black text-white/[0.04] absolute top-4 right-6"
-                      aria-hidden="true"
-                    >
-                      {step.num}
-                    </span>
-                    <div
-                      className={`h-10 w-10 sm:h-12 sm:w-12 rounded-xl ${step.bg} flex items-center justify-center ${step.color} mb-4 sm:mb-5`}
-                      aria-hidden="true"
-                    >
-                      {step.icon}
-                    </div>
-                    <h3
-                      className={`text-base sm:text-lg font-bold ${step.color} mb-2`}
-                    >
-                      {step.title}
-                    </h3>
-                    <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed">
-                      {step.desc}
-                    </p>
-                  </div>
-                </ScrollReveal>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* ───────── Interactive Demo ───────── */}
+        {/* ───────── Interactive Demo (MOVED UP) ───────── */}
         <section
           ref={simRef}
           aria-labelledby="demo-heading"
           className="px-4 sm:px-6 pb-20 sm:pb-24"
         >
           <div className="max-w-5xl mx-auto">
+            <div className="flex flex-col lg:flex-row items-start gap-6 lg:gap-10">
+            {/* Mascot — left side on desktop, top on mobile */}
+            <div className="hidden lg:flex shrink-0 pt-20">
+              <PolyMascot currentStep={simStep} />
+            </div>
+            <div className="flex-1 min-w-0">
             <ScrollReveal className="text-center mb-8 sm:mb-10">
               <h2
                 id="demo-heading"
@@ -652,7 +683,7 @@ export function LandingPage({
                 See it in action
               </h2>
               <p className="text-zinc-400 text-sm sm:text-base">
-                Watch Poly detect a breaking change and fix it \u2014 step by
+                Watch Poly detect a breaking change and fix it — step by
                 step
               </p>
             </ScrollReveal>
@@ -863,7 +894,7 @@ export function LandingPage({
                             </p>
                             <p className="text-xs text-zinc-400 mt-0.5">
                               The patch is now cached. Future responses with
-                              this schema are patched instantly \u2014 no AI
+                              this schema are patched instantly — no AI
                               call needed.
                             </p>
                           </div>
@@ -873,6 +904,105 @@ export function LandingPage({
                   </AnimatePresence>
                 )}
               </div>
+            </div>
+            </div>{/* close mascot flex wrapper */}
+            {/* Mobile mascot (below demo) */}
+            <div className="flex lg:hidden justify-center mt-8">
+              <PolyMascot currentStep={simStep} />
+            </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ───────── Architecture + How It Works ───────── */}
+        <section
+          aria-labelledby="how-it-works-heading"
+          className="px-4 sm:px-6 pb-20 sm:pb-24"
+        >
+          <div className="max-w-5xl mx-auto">
+            <ScrollReveal className="text-center mb-10 sm:mb-14">
+              <h2
+                id="how-it-works-heading"
+                className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-3"
+              >
+                How Poly sits in your stack
+              </h2>
+              <p className="text-zinc-400 text-sm sm:text-base max-w-xl mx-auto">
+                Poly runs entirely in your process. Only schema metadata (not
+                your data) reaches Poly Cloud for AI analysis.
+              </p>
+            </ScrollReveal>
+
+            {/* Architecture Diagram */}
+            <ScrollReveal delay={0.1} className="mb-12 sm:mb-16">
+              <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 sm:p-10">
+                <ArchitectureDiagram />
+              </div>
+            </ScrollReveal>
+
+            {/* 3 Steps */}
+            <div className="grid md:grid-cols-3 gap-4 sm:gap-6">
+              {(
+                [
+                  {
+                    num: "01",
+                    icon: <Eye className="h-5 w-5" />,
+                    title: "Detect",
+                    color: "text-amber-400",
+                    bg: "bg-amber-500/10",
+                    border: "border-amber-500/20",
+                    desc: "SDK intercepts every API response and compares it against the learned schema baseline. Detects 7 types of drift — field renames, type changes, removals, and more.",
+                  },
+                  {
+                    num: "02",
+                    icon: <Cpu className="h-5 w-5" />,
+                    title: "Analyze",
+                    color: "text-purple-400",
+                    bg: "bg-purple-500/10",
+                    border: "border-purple-500/20",
+                    desc: "Only schema metadata is sent to Poly Cloud. AI generates a safe mapping with a confidence score. Protected fields like prices and auth tokens are never touched.",
+                  },
+                  {
+                    num: "03",
+                    icon: <GitBranch className="h-5 w-5" />,
+                    title: "Patch",
+                    color: "text-cyan-400",
+                    bg: "bg-cyan-500/10",
+                    border: "border-cyan-500/20",
+                    desc: "The response is transformed locally in-memory before your application code sees it. The patch is cached — no repeated AI calls. Your code keeps working.",
+                  },
+                ] as const
+              ).map((step, idx) => (
+                <ScrollReveal key={step.num} delay={idx * 0.1}>
+                  <div
+                    className={`relative rounded-2xl border ${step.border} bg-white/[0.02] p-5 sm:p-8 transition-all hover:bg-white/[0.04] focus-within:ring-2 focus-within:ring-purple-400/50 h-full`}
+                    tabIndex={0}
+                    role="article"
+                    aria-label={`Step ${step.num}: ${step.title}`}
+                  >
+                    <span
+                      className="text-5xl font-black text-white/[0.04] absolute top-4 right-6"
+                      aria-hidden="true"
+                    >
+                      {step.num}
+                    </span>
+                    <div
+                      className={`h-10 w-10 sm:h-12 sm:w-12 rounded-xl ${step.bg} flex items-center justify-center ${step.color} mb-4 sm:mb-5`}
+                      aria-hidden="true"
+                    >
+                      {step.icon}
+                    </div>
+                    <h3
+                      className={`text-base sm:text-lg font-bold ${step.color} mb-2`}
+                    >
+                      {step.title}
+                    </h3>
+                    <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed">
+                      {step.desc}
+                    </p>
+                  </div>
+                </ScrollReveal>
+              ))}
             </div>
           </div>
         </section>
@@ -899,14 +1029,14 @@ export function LandingPage({
                 "// Initialize with your API key",
                 'Poly.init({ apiKey: "poly_live_xxx" })',
                 "",
-                "// Wrap your HTTP client \u2014 that's it!",
+                "// Wrap your HTTP client — that's it!",
                 "Poly.wrap(axios)",
               ]}
             />
           </ScrollReveal>
         </section>
 
-        {/* ───────── Features Grid ───────── */}
+        {/* ───────── Features Grid (Bento Layout) ───────── */}
         <section
           aria-labelledby="features-heading"
           className="px-4 sm:px-6 pb-20 sm:pb-24"
@@ -925,81 +1055,276 @@ export function LandingPage({
               </p>
             </ScrollReveal>
 
-            <motion.div
-              className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4"
-              variants={stagger}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: "-40px" }}
-            >
-              {(
-                [
-                  {
-                    icon: <Eye className="h-5 w-5" />,
-                    title: "7 Drift Types",
-                    desc: "Field renames, type changes, removals, additions, nested shifts, enum changes, and structure reordering \u2014 all auto-detected.",
-                    color: "text-amber-400",
-                    bg: "bg-amber-500/10",
-                  },
-                  {
-                    icon: <Shield className="h-5 w-5" />,
-                    title: "Protected Fields",
-                    desc: "Mark prices, payments, auth tokens, or any field as protected. Poly will never generate a mapping that touches them.",
-                    color: "text-red-400",
-                    bg: "bg-red-500/10",
-                  },
-                  {
-                    icon: <Database className="h-5 w-5" />,
-                    title: "Patch Cache",
-                    desc: "Once a patch is generated, it's cached locally. Identical drift patterns are fixed instantly without any AI call.",
-                    color: "text-cyan-400",
-                    bg: "bg-cyan-500/10",
-                  },
-                  {
-                    icon: <Lock className="h-5 w-5" />,
-                    title: "Zero Proxy",
-                    desc: "Your traffic never routes through Poly servers. The SDK runs entirely in your process \u2014 intercepting and patching locally.",
-                    color: "text-emerald-400",
-                    bg: "bg-emerald-500/10",
-                  },
-                  {
-                    icon: <Cpu className="h-5 w-5" />,
-                    title: "AI Confidence Scores",
-                    desc: "Every patch comes with a confidence score. Set thresholds to auto-apply high-confidence patches and review low-confidence ones.",
-                    color: "text-purple-400",
-                    bg: "bg-purple-500/10",
-                  },
-                  {
-                    icon: <Sparkles className="h-5 w-5" />,
-                    title: "Rule Engine",
-                    desc: "Override AI with custom rules. Force specific field mappings, block changes, or whitelist endpoints \u2014 full control.",
-                    color: "text-pink-400",
-                    bg: "bg-pink-500/10",
-                  },
-                ] as const
-              ).map((f) => (
-                <motion.div
-                  key={f.title}
-                  variants={fadeUp}
-                  className="group rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 sm:p-6 transition-all hover:bg-white/[0.04] hover:border-white/[0.12] focus-within:ring-2 focus-within:ring-purple-400/50"
-                  tabIndex={0}
-                  role="article"
-                  aria-label={`${f.title}: ${f.desc}`}
-                >
-                  <div
-                    className={`h-10 w-10 rounded-xl ${f.bg} flex items-center justify-center ${f.color} mb-4 group-hover:scale-110 transition-transform`}
-                    aria-hidden="true"
-                  >
-                    {f.icon}
+            {/* Bento Grid — alternating layouts */}
+            <div className="space-y-4">
+              {/* Row 1: 2 large cards */}
+              <div className="grid md:grid-cols-2 gap-4">
+                <ScrollReveal>
+                  <div className="group rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 sm:p-8 transition-all hover:bg-white/[0.04] hover:border-white/[0.12] h-full flex flex-col">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400 group-hover:scale-110 transition-transform shrink-0">
+                        <Eye className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold">7 Drift Types</h3>
+                        <span className="text-[10px] text-zinc-600">Auto-detected</span>
+                      </div>
+                    </div>
+                    <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed flex-1">
+                      Field renames, type changes, removals, additions, nested
+                      shifts, enum changes, and structure reordering — Poly
+                      catches them all before they crash your app.
+                    </p>
+                    <div className="mt-4 flex flex-wrap gap-1.5">
+                      {["rename", "type", "remove", "nested", "enum", "order", "add"].map((t) => (
+                        <span key={t} className="text-[9px] px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-400/80 font-mono">
+                          {t}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                  <h3 className="text-sm font-bold mb-1.5">{f.title}</h3>
-                  <p className="text-xs text-zinc-500 leading-relaxed">
-                    {f.desc}
-                  </p>
-                </motion.div>
-              ))}
-            </motion.div>
+                </ScrollReveal>
+
+                <ScrollReveal delay={0.05}>
+                  <div className="group rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 sm:p-8 transition-all hover:bg-white/[0.04] hover:border-white/[0.12] h-full flex flex-col">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="h-10 w-10 rounded-xl bg-red-500/10 flex items-center justify-center text-red-400 group-hover:scale-110 transition-transform shrink-0">
+                        <Shield className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold">Protected Fields</h3>
+                        <span className="text-[10px] text-zinc-600">Zero data leaks</span>
+                      </div>
+                    </div>
+                    <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed flex-1">
+                      Mark prices, payments, auth tokens, or any field as
+                      protected. Poly will never include them in AI analysis —
+                      guaranteed.
+                    </p>
+                    <div className="mt-4 flex items-center gap-2 text-[10px] text-red-400/70 font-mono bg-red-500/[0.06] rounded-lg px-3 py-2 border border-red-500/10">
+                      <Lock className="h-3 w-3 shrink-0" />
+                      protected_fields: [&quot;price&quot;, &quot;token&quot;, &quot;ssn&quot;]
+                    </div>
+                  </div>
+                </ScrollReveal>
+              </div>
+
+              {/* Row 2: 1 wide + 2 small */}
+              <div className="grid md:grid-cols-3 gap-4">
+                <ScrollReveal delay={0.1}>
+                  <div className="group rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 transition-all hover:bg-white/[0.04] hover:border-white/[0.12] h-full">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform shrink-0">
+                        <Lock className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold">Zero Proxy</h3>
+                        <span className="text-[10px] text-zinc-600">Locally runs</span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-zinc-400 leading-relaxed">
+                      Your traffic never routes through Poly servers. The SDK
+                      runs entirely in your process — intercepting and patching
+                      locally.
+                    </p>
+                  </div>
+                </ScrollReveal>
+
+                <ScrollReveal delay={0.15}>
+                  <div className="group rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 transition-all hover:bg-white/[0.04] hover:border-white/[0.12] h-full">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="h-10 w-10 rounded-xl bg-cyan-500/10 flex items-center justify-center text-cyan-400 group-hover:scale-110 transition-transform shrink-0">
+                        <Database className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold">Patch Cache</h3>
+                        <span className="text-[10px] text-zinc-600">Instant reuse</span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-zinc-400 leading-relaxed">
+                      Identical drift patterns are fixed instantly from local
+                      cache — no repeated AI calls needed.
+                    </p>
+                  </div>
+                </ScrollReveal>
+
+                <ScrollReveal delay={0.2}>
+                  <div className="group rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 transition-all hover:bg-white/[0.04] hover:border-white/[0.12] h-full">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="h-10 w-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400 group-hover:scale-110 transition-transform shrink-0">
+                        <BarChart3 className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold">Confidence Scores</h3>
+                        <span className="text-[10px] text-zinc-600">AI-powered</span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-zinc-400 leading-relaxed">
+                      Every patch scored 0–100%. Set thresholds to auto-apply
+                      high-confidence patches, review the rest.
+                    </p>
+                  </div>
+                </ScrollReveal>
+              </div>
+
+              {/* Row 3: 1 large card centered */}
+              <ScrollReveal delay={0.25}>
+                <div className="max-w-2xl mx-auto">
+                  <div className="group rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 sm:p-8 transition-all hover:bg-white/[0.04] hover:border-white/[0.12]">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="h-10 w-10 rounded-xl bg-pink-500/10 flex items-center justify-center text-pink-400 group-hover:scale-110 transition-transform shrink-0">
+                        <Sparkles className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold">Rule Engine</h3>
+                        <span className="text-[10px] text-zinc-600">Full control</span>
+                      </div>
+                    </div>
+                    <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed">
+                      Override AI with custom rules. Force specific field
+                      mappings, block changes on critical endpoints, or
+                      whitelist trusted APIs — you&apos;re in control.
+                    </p>
+                  </div>
+                </div>
+              </ScrollReveal>
+            </div>
           </div>
+        </section>
+
+        {/* ───────── Trust / Security Section ───────── */}
+        <section
+          aria-labelledby="trust-heading"
+          className="px-4 sm:px-6 pb-20 sm:pb-24"
+        >
+          <div className="max-w-5xl mx-auto">
+            <ScrollReveal className="text-center mb-10 sm:mb-14">
+              <h2
+                id="trust-heading"
+                className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-3"
+              >
+                Your data stays yours
+              </h2>
+              <p className="text-zinc-400 text-sm sm:text-base max-w-xl mx-auto">
+                Poly was designed with privacy as a first principle. Here&apos;s exactly what happens.
+              </p>
+            </ScrollReveal>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              <ScrollReveal>
+                <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.02] p-6 sm:p-8 h-full">
+                  <h3 className="text-sm font-bold text-emerald-400 mb-4 flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4" />
+                    Stays in your process
+                  </h3>
+                  <ul className="space-y-3 text-xs sm:text-sm text-zinc-400">
+                    <li className="flex items-start gap-2.5">
+                      <span className="text-emerald-400 mt-0.5 shrink-0">✓</span>
+                      <span>Full API response payloads — <strong className="text-zinc-300">never leave your machine</strong></span>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                      <span className="text-emerald-400 mt-0.5 shrink-0">✓</span>
+                      <span>User data, PII, business logic — <strong className="text-zinc-300">stays local</strong></span>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                      <span className="text-emerald-400 mt-0.5 shrink-0">✓</span>
+                      <span>Auth tokens, API keys, secrets — <strong className="text-zinc-300">never transmitted</strong></span>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                      <span className="text-emerald-400 mt-0.5 shrink-0">✓</span>
+                      <span>Patches apply in-memory — <strong className="text-zinc-300">zero latency</strong></span>
+                    </li>
+                  </ul>
+                </div>
+              </ScrollReveal>
+
+              <ScrollReveal delay={0.1}>
+                <div className="rounded-2xl border border-purple-500/20 bg-purple-500/[0.02] p-6 sm:p-8 h-full">
+                  <h3 className="text-sm font-bold text-purple-400 mb-4 flex items-center gap-2">
+                    <Cpu className="h-4 w-4" />
+                    Sent to Poly Cloud (only)
+                  </h3>
+                  <ul className="space-y-3 text-xs sm:text-sm text-zinc-400">
+                    <li className="flex items-start gap-2.5">
+                      <span className="text-purple-400 mt-0.5 shrink-0">→</span>
+                      <span>Field names and types — <code className="text-purple-300 bg-purple-500/10 px-1.5 py-0.5 rounded text-xs">full_name → name</code></span>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                      <span className="text-purple-400 mt-0.5 shrink-0">→</span>
+                      <span>Schema structure — nesting, arrays, enums</span>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                      <span className="text-purple-400 mt-0.5 shrink-0">→</span>
+                      <span>Drift type classification — rename, remove, etc.</span>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                      <span className="text-purple-400 mt-0.5 shrink-0">→</span>
+                      <span><strong className="text-zinc-300">No values, no payloads</strong> — just shapes</span>
+                    </li>
+                  </ul>
+                </div>
+              </ScrollReveal>
+            </div>
+          </div>
+        </section>
+
+        {/* ───────── Pricing / Beta Callout ───────── */}
+        <section
+          aria-label="Pricing"
+          className="px-4 sm:px-6 pb-20 sm:pb-24"
+        >
+          <ScrollReveal className="max-w-2xl mx-auto">
+            <div className="rounded-2xl border border-cyan-500/20 bg-gradient-to-b from-cyan-500/[0.04] to-transparent p-8 sm:p-10 text-center">
+              <Badge
+                variant="outline"
+                className="border-cyan-500/30 bg-cyan-500/10 text-cyan-300 text-xs font-medium mb-5 px-4 py-1.5 rounded-full"
+              >
+                <Sparkles className="h-3 w-3 mr-1.5" aria-hidden="true" />
+                Free during beta
+              </Badge>
+              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2">
+                $0<span className="text-zinc-500 text-lg font-normal">/month</span>
+              </h2>
+              <p className="text-zinc-400 text-sm mb-6">
+                No credit card. No limits. We&apos;re building in public and want your feedback.
+              </p>
+              <div className="inline-flex flex-col sm:flex-row items-center gap-3 text-xs text-zinc-500 mb-6">
+                <span className="flex items-center gap-1.5">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                  Unlimited API calls
+                </span>
+                <span className="hidden sm:inline text-zinc-700">·</span>
+                <span className="flex items-center gap-1.5">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                  Unlimited endpoints
+                </span>
+                <span className="hidden sm:inline text-zinc-700">·</span>
+                <span className="flex items-center gap-1.5">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                  Priority support
+                </span>
+              </div>
+              <div className="flex items-center justify-center gap-3">
+                <Button
+                  size="lg"
+                  onClick={onEnterDashboard}
+                  className="bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-400 hover:to-violet-500 text-white font-semibold rounded-xl px-8 h-12 min-h-[44px]"
+                >
+                  Get started free
+                  <ArrowRight className="h-4 w-4 ml-2" aria-hidden="true" />
+                </Button>
+                <a
+                  href="https://github.com/Pritahi121/poly"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
+                >
+                  <Github className="h-4 w-4" />
+                  Star on GitHub
+                </a>
+              </div>
+            </div>
+          </ScrollReveal>
         </section>
 
         {/* ───────── Final CTA ───────── */}
@@ -1035,23 +1360,99 @@ export function LandingPage({
         </section>
       </main>
 
-      {/* ───────── Footer (sticky) ───────── */}
-      <footer className="mt-auto border-t border-white/[0.06] py-6 sm:py-8 px-4 sm:px-6">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
-          <div className="flex items-center gap-2">
-            <img
-              src="/logo.svg"
-              alt=""
-              className="h-5 w-5 rounded"
-              aria-hidden="true"
-            />
-            <span className="text-sm text-zinc-500">
-              Poly \u2014 Survive Third-Party API Changes
-            </span>
+      {/* ───────── Footer (Enhanced) ───────── */}
+      <footer className="mt-auto border-t border-white/[0.06] pt-10 sm:pt-14 pb-8 px-4 sm:px-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 mb-10">
+            {/* Product */}
+            <div>
+              <h4 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-4">
+                Product
+              </h4>
+              <ul className="space-y-2.5">
+                <li><a href="#" className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors">Dashboard</a></li>
+                <li><a href="#" className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors">SDK Docs</a></li>
+                <li><a href="#" className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors">API Reference</a></li>
+                <li><a href="#" className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors">Changelog</a></li>
+              </ul>
+            </div>
+
+            {/* Resources */}
+            <div>
+              <h4 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-4">
+                Resources
+              </h4>
+              <ul className="space-y-2.5">
+                <li><a href="#" className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors">Documentation</a></li>
+                <li><a href="#" className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors">Quick Start</a></li>
+                <li><a href="#" className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors">Examples</a></li>
+                <li><a href="#" className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors">Blog</a></li>
+              </ul>
+            </div>
+
+            {/* Company */}
+            <div>
+              <h4 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-4">
+                Company
+              </h4>
+              <ul className="space-y-2.5">
+                <li><a href="#" className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors">About</a></li>
+                <li><a href="#" className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors">Privacy Policy</a></li>
+                <li><a href="#" className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors">Terms of Service</a></li>
+                <li><a href="mailto:hello@poly.dev" className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors">Contact</a></li>
+              </ul>
+            </div>
+
+            {/* Community */}
+            <div>
+              <h4 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-4">
+                Community
+              </h4>
+              <ul className="space-y-2.5">
+                <li>
+                  <a
+                    href="https://github.com/Pritahi121/poly"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors inline-flex items-center gap-1.5"
+                  >
+                    <Github className="h-3.5 w-3.5" />
+                    GitHub
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors inline-flex items-center gap-1.5">
+                    <MessageCircle className="h-3.5 w-3.5" />
+                    Discord
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors inline-flex items-center gap-1.5">
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    Twitter / X
+                  </a>
+                </li>
+              </ul>
+            </div>
           </div>
-          <p className="text-xs text-zinc-600">
-            MIT License &middot; v1.0.0
-          </p>
+
+          {/* Bottom bar */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-6 border-t border-white/[0.04]">
+            <div className="flex items-center gap-2">
+              <img
+                src="/logo.svg"
+                alt=""
+                className="h-5 w-5 rounded"
+                aria-hidden="true"
+              />
+              <span className="text-sm text-zinc-500">
+                Poly — Survive Third-Party API Changes
+              </span>
+            </div>
+            <p className="text-xs text-zinc-600">
+              © {new Date().getFullYear()} Poly · MIT License · v1.0.0
+            </p>
+          </div>
         </div>
       </footer>
     </div>
