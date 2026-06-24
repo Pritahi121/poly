@@ -57,17 +57,17 @@ export function SdkDocsPage() {
               <TabsTrigger value="pnpm">pnpm</TabsTrigger>
             </TabsList>
             <TabsContent value="npm">
-              <CodeBlock language="bash" code={`npm install poly-sdk`} />
+              <CodeBlock language="bash" code={`npm i github:Pritahi121/poly-sdk`} />
             </TabsContent>
             <TabsContent value="yarn">
-              <CodeBlock language="bash" code={`yarn add poly-sdk`} />
+              <CodeBlock language="bash" code={`yarn add github:Pritahi121/poly-sdk`} />
             </TabsContent>
             <TabsContent value="pnpm">
-              <CodeBlock language="bash" code={`pnpm add poly-sdk`} />
+              <CodeBlock language="bash" code={`pnpm add github:Pritahi121/poly-sdk`} />
             </TabsContent>
           </Tabs>
           <div className="mt-4">
-            <CodeBlock language="typescript" code={`import { Poly } from "poly-sdk"\nimport axios from "axios"\n\n// 1. Initialize with your API key\nPoly.init({\n  apiKey: "poly_live_xxx"\n})\n\n// 2. Wrap your HTTP client\nPoly.wrap(axios)\n\n// That's it! All responses are now monitored.\n// Schema drift is detected and patched automatically.`} />
+            <CodeBlock language="typescript" code={`import { Poly } from "pritpolytt-sdk"\nimport axios from "axios"\n\n// 1. Initialize with your API key\nPoly.init({\n  apiKey: "poly_live_xxx"\n})\n\n// 2. Wrap your HTTP client\nPoly.wrap(axios)\n\n// That's it! All responses are now monitored.\n// Schema drift is detected and patched automatically.`} />
           </div>
         </CardContent>
       </Card>
@@ -113,7 +113,7 @@ export function SdkDocsPage() {
           <CardDescription>Advanced SDK configuration options</CardDescription>
         </CardHeader>
         <CardContent>
-          <CodeBlock language="typescript" code={`import { Poly } from "poly-sdk"\n\nPoly.init({\n  apiKey: "poly_live_xxx",\n  \n  // Optional: Custom endpoint (for self-hosted)\n  endpoint: "https://api.poly.dev",\n  \n  // Optional: Confidence threshold for auto-patching\n  // Default: 98 (patches with >98% confidence are auto-applied)\n  confidenceThreshold: 98,\n  \n  // Optional: Enable dry run mode (detect but don't patch)\n  dryRun: false,\n  \n  // Optional: Disable Poly entirely (e.g. for testing)\n  // Can also be set via: POLY_DISABLE=1\n  disable: false,\n  \n  // Optional: Custom rules for this project\n  rules: [\n    { type: "protected", field: "payment_status", action: "block" },\n    { type: "safe", field: "display_name", action: "allow" },\n  ],\n  \n  // Optional: Upload an OpenAPI spec for baseline\n  openApiSpec: require("./openapi.json"),\n  \n  // Optional: Provide Zod schemas for baseline\n  zodSchemas: { UserSchema, OrderSchema },\n})`} />
+          <CodeBlock language="typescript" code={`import { Poly } from "pritpolytt-sdk"\n\nPoly.init({\n  apiKey: "poly_live_xxx",\n  \n  // Optional: Custom endpoint (for self-hosted)\n  endpoint: "https://api.poly.dev",\n  \n  // Optional: Confidence threshold for auto-patching\n  // Default: 98 (patches with >98% confidence are auto-applied)\n  confidenceThreshold: 98,\n  \n  // Optional: Enable dry run mode (detect but don't patch)\n  dryRun: false,\n  \n  // Optional: Disable Poly entirely (e.g. for testing)\n  // Can also be set via: POLY_DISABLE=1\n  disable: false,\n  \n  // Optional: Custom rules for this project\n  rules: [\n    { type: "protected", field: "payment_status", action: "block" },\n    { type: "safe", field: "display_name", action: "allow" },\n  ],\n  \n  // Optional: Upload an OpenAPI spec for baseline\n  openApiSpec: require("./openapi.json"),\n  \n  // Optional: Provide Zod schemas for baseline\n  zodSchemas: { UserSchema, OrderSchema },\n})`} />
         </CardContent>
       </Card>
 
