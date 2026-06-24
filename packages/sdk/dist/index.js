@@ -55,8 +55,8 @@ exports.Poly = {
         if (isDisabled())
             return axios;
         // Add response interceptor
-        axios.interceptors.response.use((response) => {
-            handleResponse(response.config, response.data);
+        axios.interceptors.response.use(async (response) => {
+            await handleResponse(response.config, response.data);
             return response;
         }, (error) => {
             if (config === null || config === void 0 ? void 0 : config.onError)
@@ -188,6 +188,7 @@ async function handleResponse(requestConfig, responseData) {
             // Apply cached patches locally
             if (!config.dryRun) {
                 (0, transformer_1.applyPatches)(responseData, cachedPatches);
+                Object.assign(responseData, (0, transformer_1.applyPatches)(responseData, cachedPatches));
             }
             return;
         }
@@ -200,6 +201,7 @@ async function handleResponse(requestConfig, responseData) {
         // 7. Apply patches if confidence is above threshold
         if (analysisResult.confidence >= getConfidenceThreshold() && !config.dryRun) {
             (0, transformer_1.applyPatches)(responseData, analysisResult.mapping);
+            Object.assign(responseData, (0, transformer_1.applyPatches)(responseData, analysisResult.mapping));
             for (const patch of analysisResult.mapping) {
                 emit("patch", patch);
                 if (config.onPatch)
